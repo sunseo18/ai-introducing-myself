@@ -1,9 +1,14 @@
-from ai.embedding_model import get_transformer_model
+import os
+import sys
 from dotenv import load_dotenv
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from ai.embedding_model import get_transformer_model
 from db.qdrant import get_qdrant_client
 from db.qdrant import COLLECTION_NAME
 
-def query_junseo_collection(query_text: str, top_k: int = 5):
+
+def query(query_text: str, top_k: int) -> list[str]:
     
     embedded_query = get_transformer_model().encode(
         query_text,
@@ -18,18 +23,19 @@ def query_junseo_collection(query_text: str, top_k: int = 5):
         with_vectors=False  
     )
 
-    print(f"\n===== Query: {query_text} =====")
+    print(f"\n===== 질문: {query_text} =====")
     if not results:
-        print("조회된 결과가 없습니다.")
-        return
+        return []
 
     for hit in results:
-        payload = hit.payload or {}
-        paragraph_text = payload.get("text", "(텍스트 없음)")
         score = hit.score
-        print(f"– Score: {score:.4f}\n  Text: {paragraph_text}\n")
+        text = hit.payload.get("text", "정보 없음")
+        print(f"– 유사도: {score:.4f}\n  결과: {text}\n")
+
+    return [hit.payload["text"] for hit in results]
 
 if __name__ == "__main__":
+
     load_dotenv()
 
-    query_junseo_collection("이름이 뭔가요?", top_k=3)
+    query("이름이 뭔가요?", top_k=3)
